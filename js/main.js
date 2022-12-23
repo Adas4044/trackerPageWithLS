@@ -1,69 +1,144 @@
-// Create a registration system
-var objPeople = [
-	{
-		username: 'sam',
-		password: 'password25'
-	},
-	{
-		username: 'matt',
-		password: 'password88'
-	},
-	{
-		username: 'chris',
-		password: 'password3'
-	}
-]
+class WorkoutTracker {
+    static LOCAL_STORAGE_DATA_KEY = "workout-tracker-entries";
 
-// login functionality
-function login() {
-	// retreive data from username and store in username variable
-	var username = document.getElementById('username').value
-	// retreive data from password and store in password variable
-	var password = document.getElementById('password').value
+    constructor(root) {
+        this.root = root;
+        this.root.insertAdjacentHTML("afterbegin", WorkoutTracker.html());
+        this.entries = [];
 
-	// loop through all the user pbjects and confrim if the username and password are correct
-	for(var i = 0; i < objPeople.length; i++) {
-		// check to 
-		if(username == objPeople[i].username && password == objPeople[i].password) {
-			console.log(username + ' is logged in!!!')
-			// stop the statement if result is found true - this was a return in the video, break is best practice here
-			break
-		} else {
-			// error if username and password don't match
-			console.log('incorrect username or password')
-		}
-	}
+        this.loadEntries();
+        this.updateView();
+
+        this.root.querySelector(".tracker__add").addEventListener("click", () => {
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, "0");
+            const day = date.getDay().toString().padStart(2, "0");
+
+            this.addEntry({
+                date: `${ year }-${ month }-${ day }`,
+                workout: "walking",
+                duration: 30
+            });
+        });
+    }
+
+    static html() {
+        return `
+            <table class="tracker">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Workout</th>
+                        <th>Duration</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody class="tracker__entries"></tbody>
+                <tbody>
+                    <tr class="tracker__row tracker__row--add">
+                        <td colspan="4">
+                            <span class="tracker__add">Add Entry &plus;</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+    }
+
+    static rowHtml() {
+        return `
+            <tr class="tracker__row">
+                <td>
+                    <input type="date" class="tracker__date">
+                </td>
+                <td>
+                    <select class="tracker__workout">
+                        <option value="walking">Walking</option>
+                        <option value="running">Running</option>
+                        <option value="outdoor-cycling">Outdoor Cycling</option>
+                        <option value="indoor-cycling">Indoor Cycling</option>
+                        <option value="swimming">Swimming</option>
+                        <option value="yoga">Yoga</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="tracker__duration">
+                    <span class="tracker__text">minutes</span>
+                </td>
+                <td>
+                    <button type="button" class="tracker__button tracker__delete">&times;</button>
+                </td>
+            </tr>
+        `;
+    }
+
+    loadEntries() {
+        this.entries = JSON.parse(localStorage.getItem(WorkoutTracker.LOCAL_STORAGE_DATA_KEY) || "[]");
+    }
+
+    saveEntries() {
+        localStorage.setItem(WorkoutTracker.LOCAL_STORAGE_DATA_KEY, JSON.stringify(this.entries));
+    }
+
+    updateView() {
+        const tableBody = this.root.querySelector(".tracker__entries");
+        const addRow = data => {
+            const template = document.createElement("template");
+            let row = null;
+
+            template.innerHTML = WorkoutTracker.rowHtml().trim();
+            row = template.content.firstElementChild;
+
+            row.querySelector(".tracker__date").value = data.date;
+            row.querySelector(".tracker__workout").value = data.workout;
+            row.querySelector(".tracker__duration").value = data.duration;
+
+            row.querySelector(".tracker__date").addEventListener("change", ({ target }) => {
+                data.date = target.value;
+                this.saveEntries();
+            });
+
+            row.querySelector(".tracker__workout").addEventListener("change", ({ target }) => {
+                data.workout = target.value;
+                this.saveEntries();
+            });
+
+            row.querySelector(".tracker__duration").addEventListener("change", ({ target }) => {
+                data.duration = target.value;
+                this.saveEntries();
+            });
+
+
+            row.querySelector(".tracker__delete").addEventListener("click", () => {
+                this.deleteEntry(data);
+            });
+
+            tableBody.appendChild(row);
+        };
+
+        tableBody.querySelectorAll(".tracker__row").forEach(row => {
+            row.remove();
+        });
+
+        this.entries.forEach(data => addRow(data));
+    }
+
+    addEntry(data) {
+        this.entries.push(data);
+        this.saveEntries();
+        this.updateView();
+    }
+
+    deleteEntry(dataToDelete) {
+        this.entries = this.entries.filter(data => data !== dataToDelete);
+        this.saveEntries();
+        this.updateView();
+    }
 }
 
-// register functionality
-function registerUser() {
-	// store new users username
-	var registerUsername = document.getElementById('newUsername').value
-	// store new users password
-	var registerPassword = document.getElementById('newPassword').value
-	// store new user data in an object
-	var newUser = {
-		username: registerUsername,
-		password: registerPassword
-	}
-	// loop throught people array to see if the username is taken, or password to short
-	for(var i = 0; i < objPeople.length; i++) {
-		// check if new username is equal to any already created usernames
-		if(registerUser == objPeople[i].username) {
-			// alert user that the username is take
-			alert('That username is alreat in user, please choose another')
-			// stop the statement if result is found true
-			break
-		// check if new password is 8 characters or more
-		} else if (registerPassword.length < 8) {
-			// alert user that the password is to short
-			alert('That is to short, include 8 or more characters')
-			// stop the statement if result is found true
-			break
-		}
-	}
-	// push new object to the people array
-	objPeople.push(newUser)
-	// console the updated people array
-	console.log(objPeople)
-}
+const app = document.getElementById("app");
+
+const wt = new WorkoutTracker(app);
+
+window.wt = wt;
